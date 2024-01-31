@@ -90,6 +90,7 @@ class DMarketApi:
             return await self.validate_response(response)
         if method == 'GET':
             async with self.session.get(url, params=params, headers=headers) as response:
+                logger.debug(f'Выполняется запрос к API: {url} с методом {method}')
                 data = await self.validate_response(response)
                 return data
         elif method == 'DELETE':
@@ -110,6 +111,7 @@ class DMarketApi:
         headers = self.generate_headers(method, url_path)
         url = API_URL + url_path
         response = await self.api_call(url, method, headers)
+        logger.debug(f'Получен ответ от user(): {response}')
         return response
 
     async def get_balance(self):
@@ -147,11 +149,17 @@ class DMarketApi:
 
         method = 'GET'
         params = {'GameID': game.value, 'Title': item_name, 'Currency': currency}
-        url_path = '/marketplace-api/v1/last-sales'
+        url_path = '/trade-aggregator/v1/last-sales'
         headers = self.generate_headers(method, url_path, params)
         url = API_URL_TRADING + url_path
         response = await self.api_call(url, method, headers, params)
+        # Логирование полного ответа сервера
+        logger.debug(f"Response status: {response.status}")
+        logger.debug(f"Response headers: {response.headers}")
+        response_text = await response.text()
+        logger.debug(f"Response body: {response_text}")
         return LastSales(**response)
+
 
     async def sales_history(self, item_name: str, game: Games = Games.CS, currency: str = 'USD',
                             period: str = '1M') -> SalesHistory:
@@ -292,11 +300,17 @@ class DMarketApi:
                           sort_type: str = 'UserOffersSortTypeDateNewestFirst', limit: str = '20'):
         method = 'GET'
         url_path = '/marketplace-api/v1/user-offers'
-        params = {'GameId': game.value, 'Status': status, 'Limit': limit, 'SortType': sort_type}
+        params = {'GameId': game.value, 'Status': status, 'SortType': sort_type, 'Limit': limit}
+
         headers = self.generate_headers(method, url_path, params)
         url = API_URL + url_path
-        response = await self.api_call(url, method, headers, params=params)
-        return UserItems(**response)
+        try:
+            response = await self.api_call(url, method, headers, params=params)
+            logger.debug(f'Ответ от user_offers: {response}')
+            return UserItems(**response)
+        except Exception as e:
+            logger.error(f'Ошибка в user_offers: {type(e).__name__}, {e}')
+            raise
 
     async def user_offers_create(self, body: CreateOffers):
         method = 'POST'

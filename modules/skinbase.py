@@ -32,11 +32,15 @@ class SkinBase:
     async def get_items(self, min_p: int, max_p: int, game: Games) -> List[MarketOffer]:
         market_offers = await self.api.market_offers(price_from=min_p, price_to=max_p, game=game)
         cursor = market_offers.cursor
-        while cursor:
+        total_offers = 0
+        while total_offers < 1000:
             other_offers = await self.api.market_offers(price_from=min_p, price_to=max_p,
                                                         cursor=cursor, game=game)
             market_offers.objects += other_offers.objects
             cursor = other_offers.cursor
+            total_offers += len(other_offers.objects)  # Увеличиваем общее количество предложений
+            print(f"Количество предложений на текущей итерации: {len(other_offers.objects)}")
+            print(f"Общее количество предложений: {total_offers}")
         market_offers.objects = sorted(market_offers.objects, key=lambda x: x.title)
         skins = [list(group)[0] for _, group in groupby(market_offers.objects, lambda x: x.title)]
         return [s for s in skins if self.check_name(s.title)]
@@ -63,9 +67,11 @@ class SkinBase:
                                              avg_price=avg_price, update_time=datetime.datetime.now())
                             s.append(sk)
                         except ValidationError as e:
-                            logger.error(e.json())
+                            logger.error(f'Validation error in skin base: {e.json()}')
+                else:
+                    logger.warning(f'Unexpected history length for skin: {i.title} (length={len(history.LastSales)})')
             except Exception as e:
-                logger.error(f'Exception in skin base{e}')
+                logger.error(f'Exception in skin base: {e}')
             if count % 500 == 0:
                 logger.debug(f'Игра {game}. Проанализировано {count} скинов.')
             count += 1
@@ -91,3 +97,4 @@ class SkinBase:
         skins = await self.filter_skins(skins_to_update, self.min_price, self.max_price)
         self.select_skin.find_by_name(skins)
         logger.info(f'База скинов обновлялась {round((time() - now) / 60, 2)} минут.')
+

@@ -5,7 +5,7 @@ from api.schemas import SellOffer, CreateOffer, CreateOffers, LastPrice, EditOff
     DeleteOffers, DeleteOffer, OfferDetails
 from api.dmarketapi import DMarketApi
 from config import PUBLIC_KEY, SECRET_KEY, SellParams, logger, GAMES
-from time import time
+from time import time, sleep
 
 
 class History:
@@ -20,35 +20,60 @@ class History:
         return list()
 
     async def save_skins(self):
-        buy = await self.bot.closed_targets(limit='100')
+        try:
+            logger.debug('Начало save_skins')
 
-        buy = buy.Trades
-        buy = [SellOffer(AssetID=i.AssetID, buyPrice=i.Price.Amount) for i in buy]
-        sold = []
-        for game in GAMES:
-            sell = await self.bot.user_offers(status='OfferStatusSold', game=game, limit='100')
-            sell = sell.Items
-            sold += sell
 
-        sell = [SellOffer(AssetID=i.AssetID, OfferID=i.Offer.OfferID,
-                          sellPrice=i.Offer.Price.Amount, sellTime=datetime.datetime.now(),
-                          title=i.Title, game=i.GameID) for i in sold]
-        buy_asset_ids = [s.AssetID for s in SelectSkinOffer.select_all()]
-        for b in buy:
-            if b.AssetID not in buy_asset_ids:
-                SelectSkinOffer.create_skin(b)
-        skins = self.skins_db()
+            buy = await self.bot.closed_targets(limit='100')
+            logger.debug(f'Получены закрытые сделки: {buy}')
 
-        for s in skins:
-            for i in sell:
-                if s.AssetID == i.AssetID:
-                    s.title = i.title
-                    s.sellPrice = i.sellPrice * (1 - s.fee / 100)
-                    s.OfferID = i.OfferID
-                    s.sellTime = i.sellTime
-                    s.game = i.game
-                    break
-        SelectSkinOffer.update_sold(skins)
+            buy = buy.Trades
+            buy = [SellOffer(AssetID=i.AssetID, buyPrice=i.Price.Amount) for i in buy]
+            logger.debug(f'Обработанные закрытые сделки: {buy}')
+
+            sold = []
+            for game in GAMES:
+                #Здесь мы изменили status='OfferStatusSold' на status='OfferStatusDefault'
+                #так как с OfferStatusSold запрос не проходит
+                sell = await self.bot.user_offers(status='OfferStatusDefault', game=game, limit='20')
+                logger.debug(f'Получены проданные предложения для {game}: {sell}')
+                sell = sell.Items
+                sold += sell
+
+            logger.debug(f'Всего проданных предложений: {sold}')
+
+            sell = [SellOffer(AssetID=i.AssetID, OfferID=i.Offer.OfferID,
+                              sellPrice=i.Offer.Price.Amount, sellTime=datetime.datetime.now(),
+                              title=i.Title, game=i.GameID) for i in sold]
+            logger.debug('Обработанные проданные предложения')
+
+            buy_asset_ids = [s.AssetID for s in SelectSkinOffer.select_all()]
+            logger.debug(f'ID купленных активов: {buy_asset_ids}')
+
+            for b in buy:
+                if b.AssetID not in buy_asset_ids:
+                    SelectSkinOffer.create_skin(b)
+                    logger.debug(f'Создан скин для {b.AssetID}')
+
+            skins = self.skins_db()
+            logger.debug('Получена информация из skins_db')
+            logger.debug(skins)
+            for s in skins:
+                for i in sell:
+                    if s.AssetID == i.AssetID:
+                        s.title = i.title
+                        s.sellPrice = i.sellPrice * (1 - s.fee / 100)
+                        s.OfferID = i.OfferID
+                        s.sellTime = i.sellTime
+                        s.game = i.game
+                        logger.debug(f'Обновлена информация скина: {s.AssetID}')
+                        break
+            SelectSkinOffer.update_sold(skins)
+            logger.debug('Обновление информации о проданных скинах завершено')
+
+        except Exception as e:
+            logger.error(f'Ошибка в save_skins: {type(e).__name__}, {e}')
+            raise
 
 
 class Offers:

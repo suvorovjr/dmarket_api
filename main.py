@@ -5,6 +5,7 @@ from config import *
 from modules.skinbase import SkinBase
 from modules.orders import Orders
 from modules.offers import History, Offers
+from credentials import PUBLIC_KEY, SECRET_KEY
 
 
 bot = DMarketApi(PUBLIC_KEY, SECRET_KEY)
@@ -54,7 +55,7 @@ async def history_loop():
             await asyncio.sleep(60*15)
         except Exception as e:
             logger.error(f' Не удалось получить историю: {e}. Спим 10 секунд.')
-            await asyncio.sleep(30)
+            await asyncio.sleep(10)
 
 
 async def add_to_sell_loop():

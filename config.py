@@ -7,7 +7,7 @@ from credentials import PUBLIC_KEY, SECRET_KEY
 
 logger_config = {
     "handlers": [
-        {"sink": sys.stderr, 'colorize': True, 'level': 'INFO'},
+        {"sink": sys.stderr, 'colorize': True, 'level': 'DEBUG'},
         # {"sink": "log/debug.log", "serialize": False, 'level': 'DEBUG'},
         {"sink": "log/info.log", "serialize": False, 'level': 'INFO'},
     ]
@@ -32,7 +32,7 @@ class Timers:
 
 class PrevParams:
     # POPULARITY = 3
-    MIN_AVG_PRICE = 900
+    MIN_AVG_PRICE = 200
     MAX_AVG_PRICE = 35000
 
 

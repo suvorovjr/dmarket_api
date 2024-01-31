@@ -1,5 +1,7 @@
 from typing import List
 from datetime import datetime
+
+from loguru import logger
 from peewee import DoesNotExist
 
 from db.models import Skin, SkinOffer, db
@@ -77,11 +79,12 @@ class SelectSkinOffer:
 
     @staticmethod
     def update_sold(skins: List[SkinOffer]):
-
-        with db.atomic():
-            SkinOffer.bulk_update(skins, fields=[SkinOffer.title, SkinOffer.sellPrice,
-                                                 SkinOffer.sellTime, SkinOffer.OfferID])
-
+        if skins:
+            with db.atomic():
+                SkinOffer.bulk_update(skins, fields=[SkinOffer.title, SkinOffer.sellPrice,
+                                                     SkinOffer.sellTime, SkinOffer.OfferID])
+        else:
+            logger.debug("Список skins пустой. Нет объектов для обновления.")
     @staticmethod
     def select_not_sell() -> List[SellOffer]:
         skins = SkinOffer.select().where(SkinOffer.sellTime == None)
