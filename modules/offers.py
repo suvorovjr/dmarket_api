@@ -9,21 +9,36 @@ from time import time, sleep
 
 
 class History:
+    """
+    Класс предназначен для управления историей скинов, включая обработку закрытых сделок покупки и продажи.
+    Отвечает за сохранение информации о купленных и проданных скинах в базу данных.
+    """
     def __init__(self, bot: DMarketApi):
+        """
+        Конструктор класса History.
+
+        :param bot: Экземпляр бота для взаимодействия с API DMarket.
+        """
         self.bot = bot
 
     @staticmethod
     def skins_db() -> List[SkinOffer]:
+        """
+        Получает список скинов из базы данных, которые еще не были проданы.
+
+        :return: Список объектов SkinOffer, представляющих скины, доступные для продажи.
+        """
         skins = SelectSkinOffer.select_all()
         if skins:
             return [i for i in skins if not i.sellTime]
         return list()
 
     async def save_skins(self):
+        """
+        Сохраняет информацию о закрытых сделках покупки и проданных предложениях скинов.
+        Обновляет базу данных скинов, добавляя новые купленные скины и обновляя информацию о проданных.
+        """
         try:
-            logger.debug('Начало save_skins')
-
-
             buy = await self.bot.closed_targets(limit='100')
             logger.debug(f'Получены закрытые сделки: {buy}')
 
@@ -34,7 +49,7 @@ class History:
             sold = []
             for game in GAMES:
                 #Здесь мы изменили status='OfferStatusSold' на status='OfferStatusDefault'
-                #так как с OfferStatusSold запрос не проходит
+                #так как с OfferStatusSold запрос не проходит видимо потому что вначале нету проданных скинов
                 sell = await self.bot.user_offers(status='OfferStatusDefault', game=game, limit='20')
                 logger.debug(f'Получены проданные предложения для {game}: {sell}')
                 sell = sell.Items
@@ -77,12 +92,29 @@ class History:
 
 
 class Offers:
+    """
+    Класс для создания, обновления и удаления предложений продажи скинов на платформе.
+    Включает в себя методы для добавления скинов на продажу, обновления цен на существующие предложения
+    и удаления предложений из активных продаж.
+    """
     def __init__(self, bot: DMarketApi):
+        """
+        Инициализирует экземпляр класса Offers для управления предложениями продажи скинов.
+
+        Этот конструктор сохраняет экземпляр API для взаимодействия с платформой DMarket и настраивает
+        параметры ценообразования для продажи скинов на основе заданных конфигурационных значений.
+
+        :param bot: Экземпляр DMarketApi, через который осуществляется взаимодействие с API DMarket.
+        """
         self.bot = bot
         self.max_percent = SellParams.MAX_PERCENT
         self.min_percent = SellParams.MIN_PERCENT
 
     async def add_to_sell(self):
+        """
+        Добавляет скины в список продаж, устанавливая цены на основе заданных параметров и комиссии платформы.
+        Синхронизирует информацию о скинах с инвентарем пользователя и базой данных предложений.
+        """
         skins = SelectSkinOffer.select_not_sell()
         inv_skins = []
         invent = []
@@ -119,6 +151,14 @@ class Offers:
 
     @staticmethod
     def offer_price(max_p, min_p, best) -> float:
+        """
+        Рассчитывает цену предложения на продажу скина, основываясь на текущей лучшей цене и заданных пределах.
+
+        :param max_p: Максимальная цена предложения.
+        :param min_p: Минимальная цена предложения.
+        :param best: Текущая лучшая цена на рынке.
+        :return: Оптимальная цена для предложения продажи.
+        """
         if best < min_p:
             order_price = min_p
         elif min_p < best <= max_p:
@@ -128,6 +168,10 @@ class Offers:
         return order_price
 
     async def update_offers(self):
+        """
+        Обновляет цены на активные предложения продажи, сравнивая их с текущими рыночными ценами и корректируя
+        в соответствии с заданной стратегией ценообразования и комиссией платформы.
+        """
         on_sell = sorted([i for i in SelectSkinOffer.select_not_sell() if i.OfferID],
                          key=lambda x: x.title)
 
@@ -160,6 +204,9 @@ class Offers:
         logger.debug(f'UPDATE OFFERS: {updated}')
 
     async def delete_all_offers(self):
+        """
+        Удаляет все активные предложения продажи пользователя, очищая список предложений на платформе.
+        """
         offers = await self.bot.user_offers(status='OfferStatusActive')
         do = [DeleteOffer(itemId=o.AssetID, offerId=o.Offer.OfferID, price=o.Offer.Price) for o in offers.Items]
         await self.bot.user_offers_delete(DeleteOffers(objects=do))
