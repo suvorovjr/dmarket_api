@@ -14,7 +14,18 @@ from api.exceptions import TooManyRequests
 
 
 class OrderAnalytics:
+    """
+    Класс для аналитики и управления ордерами на покупку.
+
+    Отвечает за анализ популярности и ценовых трендов скинов, а также за определение
+    скинов, которые стоит купить.
+    """
     def __init__(self, bot: DMarketApi):
+        """
+        Конструктор класса OrderAnalytics.
+
+        :param bot: Экземпляр бота для взаимодействия с API DMarket.
+        """
         self.bot = bot
         self.repeat = Timers.ORDERS_BASE
         self.frequency = BuyParams.FREQUENCY
@@ -40,6 +51,12 @@ class OrderAnalytics:
         self.min_threshold = BuyParams.MIN_THRESHOLD
 
     def popularity_control(self, skins: List[SkinHistory]) -> List[SkinHistory]:
+        """
+        Определяет популярность скинов на основе истории продаж.
+
+        :param skins: Список скинов для анализа.
+        :return: Список популярных скинов, удовлетворяющих критериям.
+        """
         items = list()
         for skin in skins:
             sales = list()
@@ -56,6 +73,12 @@ class OrderAnalytics:
         return items
 
     def boost_control(self, skins: List[SkinHistory]) -> List[SkinHistory]:
+        """
+        Фильтрует скины на основе тренда изменения цен.
+
+        :param skins: Список скинов для анализа.
+        :return: Список скинов, цены на которые показывают положительный тренд.
+        """
         new_skins = list()
         for item in skins:
             mov_av = mov_av_5(item.LastSales)
@@ -73,6 +96,12 @@ class OrderAnalytics:
         return new_skins
 
     async def good_skins(self, skins: List[SkinHistory]) -> List[SkinOrder]:
+        """
+        Выбирает скины, подходящие для покупки на основе заданных критериев.
+
+        :param skins: Список скинов для анализа.
+        :return: Список скинов, рекомендованных к покупке.
+        """
         items = list()
         skins = sorted(skins, key=lambda x: x.title)
         names = [i.title for i in skins]
@@ -93,6 +122,13 @@ class OrderAnalytics:
         return items
 
     async def frequency_skins(self, skins: List[SkinHistory]) -> List[SkinOrder]:
+        """
+        Анализирует скины по частоте продаж и вычисляет потенциальную прибыльность
+        для каждого скина, основываясь на текущих рыночных ценах и наценке.
+
+        :param skins: Список объектов SkinHistory для анализа.
+        :return: Список объектов SkinOrder с скинами, которые потенциально прибыльны для покупки.
+        """
         items = list()
         skins = sorted(skins, key=lambda x: x.title)
         names = [i.title for i in skins]
@@ -116,6 +152,12 @@ class OrderAnalytics:
 
     @staticmethod
     def first_second_offer(info: List[CumulativePrice]) -> tuple:
+        """
+        Определяет цены на лучшее и второе лучшее предложение среди агрегированных данных о ценах.
+
+        :param info: Список объектов CumulativePrice с агрегированными данными о ценах.
+        :return: Кортеж с ценами на лучшее и второе лучшее предложение, а также общее количество предложений.
+        """
         len_offers = len(info)
         if len_offers == 0:
             best_offer_price = 0
@@ -134,6 +176,13 @@ class OrderAnalytics:
         return best_offer_price, second_offer_price, len_offers
 
     async def analyze_market_offers(self, skin: SkinHistory):
+        """
+        Анализирует рыночные предложения для конкретного скина и вычисляет потенциальную прибыль.
+
+        :param skin: Объект SkinHistory для анализа рыночных предложений.
+        :return: Кортеж с анализом рыночных предложений, включая лучшую цену покупки, лучшую цену продажи,
+                 количество предложений, количество целей, прибыльность и прибыльность на основе средней цены.
+        """
         market_info = await self.bot.cumulative_price(skin.title, skin.game)
         len_avg = skin.LastSales[0:self.avg_price_count]
         avg_price_10 = sum([s.Price.Amount/100 for s in len_avg])/len(len_avg)
@@ -148,6 +197,18 @@ class OrderAnalytics:
         return best_offer, best_target, offers_count, targets_count, profit, round(profit_by_avg, 2)
 
     async def frequency2(self, skins: List[SkinHistory]) -> List[SkinOrder]:
+        """
+        Производит углубленный анализ списка скинов для выявления наиболее прибыльных скинов для покупки.
+        Анализ основан на сравнении текущих рыночных предложений с историческими данными о продажах и вычислении
+        потенциальной прибыльности с учетом наценки и комиссии платформы.
+
+        Метод анализирует каждый скин в списке, сравнивая лучшие рыночные цены на продажу и покупку, историческую среднюю
+        цену продаж за последние 10 операций и рассчитывает потенциальную прибыль, исходя из разницы между ценой покупки
+        и целевой ценой продажи с учетом комиссии.
+
+        :param skins: Список объектов SkinHistory, представляющих скины для анализа.
+        :return: Список объектов SkinOrder, содержащих рекомендации к покупке скинов.
+        """
         items = list()
         skins = sorted(skins, key=lambda x: x.title)
         for skin in skins:
@@ -170,6 +231,11 @@ class OrderAnalytics:
         return items
 
     async def skins_for_buy(self) -> List[SkinOrder]:
+        """
+        Определяет скины для покупки на основе анализа популярности, ценовых трендов и рыночной аналитики.
+
+        :return: Список объектов SkinOrder с скинами, рекомендованными к покупке.
+        """
         t = time()
         new_skins = list()
         skins = []
@@ -199,13 +265,30 @@ class OrderAnalytics:
 
 
 class Orders:
+    """
+    Класс для управления ордерами на покупку в системе. Включает методы для создания,
+    обновления и анализа ордеров, а также для сортировки целей по их актуальности.
+    """
     def __init__(self, bot: DMarketApi):
+        """
+        Инициализация менеджера ордеров.
+
+        :param bot: Экземпляр DMarketApi для взаимодействия с API DMarket.
+        """
         self.bot = bot
         self.order_list = OrderAnalytics(self.bot)
         # self.select_order = SelectSkinOrder()
 
     @staticmethod
     def order_price(max_p, min_p, best):
+        """
+        Определяет оптимальную цену ордера на основе текущей лучшей цены и заданных пределов.
+
+        :param max_p: Максимально допустимая цена ордера.
+        :param min_p: Минимально допустимая цена ордера.
+        :param best: Текущая лучшая цена на рынке.
+        :return: Рассчитанная оптимальная цена ордера.
+        """
         if best > max_p:
             order_price = max_p
         elif min_p < best <= max_p:
@@ -216,12 +299,25 @@ class Orders:
 
     @staticmethod
     def sort_targets(skins: List[SkinOrder], targets: List[Target]) -> Tuple[List[SkinOrder], List[Target], List[Target]]:
+        """
+        Сортирует скины и цели на основе их актуальности и взаимосвязи.
+
+        :param skins: Список скинов, доступных для ордеров.
+        :param targets: Список текущих целей пользователя.
+        :return: Кортеж, содержащий списки новых скинов для ордеров, хороших и плохих целей.
+        """
         good_targets = [i for i in targets if i.Title in [s.title for s in skins]]
         bad_targets = [i for i in targets if i.Title not in [s.title for s in skins]]
         new_skins = [i for i in skins if i.title not in [s.Title for s in targets]]
         return new_skins, good_targets, bad_targets
 
     async def create_order(self, item: SkinOrder):
+        """
+        Создает ордер на покупку скина на основе анализа рыночных предложений.
+
+        :param item: Объект SkinOrder, содержащий информацию о скине для ордера.
+        :return: Результат создания ордера или пустой список, если ордер не был создан.
+        """
         offer = await self.bot.market_offers(name=item.title, limit=1, game=item.game)
         if offer.objects and offer.objects[0].title == item.title:
             offer = offer.objects[0]
@@ -241,6 +337,12 @@ class Orders:
         return []
 
     async def check_offers(self, item: SkinOrder):
+        """
+        Проверяет наличие выгодных предложений на рынке для конкретного скина.
+
+        :param item: Объект SkinOrder, содержащий информацию о скине для проверки.
+        :return: True, если есть выгодные предложения, иначе False.
+        """
         offers = await self.bot.offers_by_title(name=item.title, limit=3)
         offers = sorted(offers.objects, key=lambda x: int(x.price.USD))
         offer_prices = [o.price.USD for o in offers]
@@ -250,6 +352,29 @@ class Orders:
         return False
 
     async def update_orders(self):
+        """
+        Выполняет обновление ордеров пользователя на покупку скинов. Этот метод анализирует текущие рыночные
+        предложения и цели пользователя, чтобы определить, какие ордеры следует обновить, какие создать новые, и какие
+        удалить из-за невыгодности или изменений на рынке.
+
+        Процесс обновления включает в себя следующие шаги:
+        1. Получение списка скинов для покупки на основе аналитики OrderAnalytics, учитывающей ценовые тренды, популярность
+           скинов и другие факторы.
+        2. Запрос текущих активных и неактивных целей пользователя для сравнения с рекомендованными скинами.
+        3. Сортировка целей на 'хорошие' и 'плохие' на основе их соответствия аналитическим рекомендациям и текущему
+           состоянию рынка.
+        4. Удаление 'плохих' целей и неактивных ордеров, которые больше не соответствуют стратегии пользователя или
+           рыночной ситуации.
+        5. Создание новых ордеров на покупку для скинов, определенных как выгодные для инвестиций.
+        6. Обновление существующих 'хороших' целей, если их текущая цена не соответствует рыночной ситуации, для
+           максимизации потенциала прибыли.
+
+        В процессе обновления ордеров учитываются текущий баланс пользователя, максимальное количество предложений на
+        рынке для каждого скина и желаемый процент прибыли. Метод стремится оптимизировать портфель ордеров пользователя,
+        чтобы повысить его эффективность и потенциал для получения прибыли.
+
+        После выполнения обновления метод выводит в лог время, затраченное на операцию.
+        """
         t = time()
         skins = await self.order_list.skins_for_buy()
         targets = await self.bot.user_targets(limit='1000')
