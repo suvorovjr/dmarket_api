@@ -1,5 +1,7 @@
 from config import logger
 
+
+# Список всех пользовательских исключений, экспортируемых из этого модуля.
 __all__ = ['Error', 'BadGatewayError', 'WrongResponseException', 'BadAPIKeyException', 'InsufficientFundsException',
            'UnknownError', 'TooManyRequests', 'BadRequestError']
 

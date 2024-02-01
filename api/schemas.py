@@ -3,6 +3,31 @@ from datetime import datetime
 from typing import List, Union
 from pydantic import BaseModel
 
+# Файл `schemas.py` содержит определения схем данных, используемых для валидации и сериализации данных
+# в приложении. Схемы определены с использованием библиотеки Pydantic, что позволяет обеспечить строгую
+# типизацию и легкость в обработке и передаче данных между различными частями приложения.
+
+# Схемы включают в себя:
+# - Games: Перечисление поддерживаемых игр.
+# - Balance: Схема для представления баланса пользователя.
+# - LastPrice, LastSale, LastSales: Схемы для представления информации о последних продажах.
+# - SaleHistory, SalesHistory: Схемы для представления истории продаж.
+# - MarketOffer, MarketOffers: Схемы для представления предложений на рынке.
+# - AggregatedOffer, AggregatedTitle, AggregatedPrices: Схемы для агрегации и представления рыночных данных.
+# - Target, UserTargets, ClosedTarget, ClosedTargets: Схемы для представления целей пользователя и информации о закрытых целях.
+# - CreateTarget, CreateTargets: Схемы для создания новых целей пользователя.
+# - Offer, UserItem, UserItems: Схемы для представления предложений и информации о пользовательских предметах.
+# - CreateOffer, EditOffer, CreateOffers, EditOffers: Схемы для управления предложениями на рынке.
+# - CreateOfferResponse, CreateOffersResponse, EditOfferResponse, EditOffersResponse: Схемы для ответов API при создании и редактировании предложений.
+# - DeleteOffer, DeleteOffers: Схемы для удаления предложений.
+# - SkinHistory, SkinOrder: Схемы для представления истории и ордеров скинов.
+# - SellOffer: Схема для представления предложений о продаже.
+# - CumulativePrice, CumulativePrices: Схемы для агрегированной информации о ценах.
+# - OfferDetails, OfferDetail, OfferDetailsResponse: Схемы для детализации предложений на рынке.
+#
+# Схемы используются для стандартизации структуры данных, обмена данными с внешними API,
+# а также для обеспечения внутренней логики приложения, связанной с обработкой транзакций, анализом рынка,
+# и управлением предложениями и целями пользователя.
 
 class Games(enum.Enum):
     CS = 'a8db'
