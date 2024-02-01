@@ -12,6 +12,11 @@ from config import logger, PrevParams, BuyParams, Timers, BAD_ITEMS, GAMES
 
 class SkinBase:
     def __init__(self, api: DMarketApi):
+        """
+        Инициализация объекта класса для управления базой данных скинов.
+
+        :param api: Экземпляр класса DMarketApi для взаимодействия с API DMarket.
+        """
         self.api = api
         self.repeat = Timers.PREV_BASE
         self.min_price = PrevParams.MIN_AVG_PRICE
@@ -23,6 +28,12 @@ class SkinBase:
 
     @staticmethod
     def check_name(item_name: str):
+        """
+        Проверяет название предмета на соответствие списку нежелательных слов.
+
+        :param item_name: Название предмета для проверки.
+        :return: Возвращает True, если предмет не содержит нежелательные слова, иначе False.
+        """
         for i in BAD_ITEMS:
             if i in item_name.lower():
                 if ('Emerald Pinstripe' and 'Monkey Business' and 'Case Hardened') not in item_name:
@@ -30,6 +41,14 @@ class SkinBase:
         return True
 
     async def get_items(self, min_p: int, max_p: int, game: Games) -> List[MarketOffer]:
+        """
+        Получает предложения на рынке в заданном ценовом диапазоне для указанной игры.
+
+        :param min_p: Минимальная цена предложения.
+        :param max_p: Максимальная цена предложения.
+        :param game: Игра, для которой запрашиваются предложения.
+        :return: Список объектов MarketOffer с предложениями на рынке.
+        """
         market_offers = await self.api.market_offers(price_from=min_p, price_to=max_p, game=game)
         cursor = market_offers.cursor
         total_offers = 0
@@ -47,6 +66,14 @@ class SkinBase:
 
     async def filter_skins(self, skins: List[Union[MarketOffer, SkinHistory]], min_p: int, max_p: int) -> \
             List[SkinHistory]:
+        """
+        Фильтрует список скинов по заданным критериям цены и добавляет отфильтрованные скины в базу данных.
+
+        :param skins: Список скинов для фильтрации.
+        :param min_p: Минимальная цена для фильтрации.
+        :param max_p: Максимальная цена для фильтрации.
+        :return: Список объектов SkinHistory с отфильтрованными скинами.
+        """
         s = list()
         count = 0
         for i in skins:
@@ -78,6 +105,9 @@ class SkinBase:
         return s
 
     async def update_base(self):
+        """
+        Обновляет локальную базу данных скинов, анализируя текущие предложения на рынке DMarket.
+        """
         final_skins = list()
         for game in GAMES:
             logger.debug(game)
@@ -88,6 +118,10 @@ class SkinBase:
         logger.info(f'Всего проанализировано скинов: {len(final_skins)}')
 
     async def update(self):
+        """
+        Запускает процесс обновления базы данных скинов, включая получение новых предложений с рынка,
+        фильтрацию и добавление в базу данных. Обновляет информацию о скинах, которые уже есть в базе.
+        """
         now = time()
         await self.update_base()
         skins_to_update = [s for s in self.select_skin.select_update_time(now, self.repeat)
